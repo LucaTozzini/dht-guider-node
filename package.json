@@ -32,12 +32,10 @@
     "bittorrent-dht": "^11.0.12",
     "bittorrent-protocol": "^5.0.9",
     "p-queue": "^10.0.0",
-    "parse-torrent": "^11.0.24",
     "pino": "^10.4.0",
     "ut_metadata": "^5.0.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.2",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.19.2",
     "pino-pretty": "^13.2.0",
