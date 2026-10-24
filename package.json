@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Guider nodes: keyword search for the BitTorrent DHT",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "dev": "tsx --env-file-if-exists=.env src/index.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
