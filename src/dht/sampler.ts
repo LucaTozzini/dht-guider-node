@@ -151,6 +151,9 @@ export function startSampler(
     if (!node) return;
     const key = `${node.host}:${node.port}`;
     queued.delete(key);
+    // Block re-queuing while the query is in flight; onReply sets the
+    // real revisit time.
+    nextVisit.set(key, Date.now() + minRevisitMs);
 
     counts.queries++;
     rpc.query(

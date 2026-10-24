@@ -19,6 +19,8 @@ export interface FetchQueueOptions {
   lookupTimeoutMs?: number;
   /** Don't retry a failed hash for this long (default 1h). */
   failedTtlMs?: number;
+  /** Return true to not save a fetched torrent, e.g. a name blocklist. */
+  isBlocked?: (name: string) => boolean;
 }
 
 export type FailReason = FetchFailReason | "no_peers";
@@ -34,13 +36,22 @@ export interface FetchQueueCounts {
   droppedFull: number;
   /** Fetched, verified and added to the catalogue. */
   fetched: number;
+  /** Fetched and verified, but not saved because `isBlocked` matched. */
+  filtered: number;
   /** Gave up, by the last peer's failure reason. */
   failed: Partial<Record<FailReason, number>>;
 }
 
 export type FetchResult =
   | { ok: true; infoHash: string; name: string; ms: number }
-  | { ok: false; infoHash: string; reason: FailReason; ms: number };
+  | { ok: false; infoHash: string; reason: FailReason; ms: number }
+  | {
+      ok: false;
+      infoHash: string;
+      reason: "filtered";
+      name: string;
+      ms: number;
+    };
 
 export interface FetchQueue {
   readonly counts: FetchQueueCounts;
@@ -68,6 +79,7 @@ export function createFetchQueue(
     fetchTimeoutMs = 10_000,
     lookupTimeoutMs = 10_000,
     failedTtlMs = 60 * 60 * 1000,
+    isBlocked,
   }: FetchQueueOptions = {},
   onResult?: (result: FetchResult) => void,
 ): FetchQueue {
@@ -78,6 +90,7 @@ export function createFetchQueue(
     recentlyFailed: 0,
     droppedFull: 0,
     fetched: 0,
+    filtered: 0,
     failed: {},
   };
 
@@ -107,9 +120,17 @@ export function createFetchQueue(
           const name = await fetchMetadata(infoHash, peer, {
             timeoutMs: fetchTimeoutMs,
           });
+          const ms = Date.now() - start;
+          if (isBlocked?.(name)) {
+            // Remember it so the sampler's repeats don't refetch it.
+            counts.filtered++;
+            failedUntil.set(infoHash, Date.now() + failedTtlMs);
+            onResult?.({ ok: false, infoHash, reason: "filtered", name, ms });
+            return;
+          }
           store.add({ infoHash, name, addedAt: Date.now() });
           counts.fetched++;
-          onResult?.({ ok: true, infoHash, name, ms: Date.now() - start });
+          onResult?.({ ok: true, infoHash, name, ms });
           return;
         } catch (err) {
           reason = err instanceof FetchError ? err.reason : "malformed";

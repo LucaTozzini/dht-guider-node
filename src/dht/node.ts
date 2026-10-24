@@ -9,9 +9,8 @@ export interface NodeOptions {
   /** Where the node ID and known nodes are saved between runs. */
   stateFile: string;
   /**
-   * Bootstrap nodes as "host:port". Omit to use the library's public
-   * Mainline routers, or pass `false` to start a standalone node
-   * (e.g. a simulation seed).
+   * Bootstrap nodes as "host:port". Omit to use MAINLINE_BOOTSTRAP, or
+   * pass `false` to start a standalone node (e.g. a simulation seed).
    */
   bootstrap?: string[] | false;
   /**
@@ -34,6 +33,21 @@ interface SavedState {
 }
 
 /**
+ * The library's three default routers plus libtorrent's. On 2026-10-24
+ * router.bittorrent.com and router.utorrent.com didn't answer at all, so
+ * the library defaults alone left cold starts with a single node.
+ */
+export const MAINLINE_BOOTSTRAP = [
+  "router.bittorrent.com:6881",
+  "router.utorrent.com:6881",
+  "dht.transmissionbt.com:6881",
+  "dht.libtorrent.org:25401",
+];
+
+/** Cap on nodes kept in the state file. */
+const MAX_SAVED_NODES = 1000;
+
+/**
  * Create a DHT node, listen on `opts.port`, and resolve once it has
  * bootstrapped. Reuses the saved node ID and known nodes if present.
  */
@@ -42,7 +56,7 @@ export async function startNode(opts: NodeOptions): Promise<DHT> {
 
   const dht = new DHT({
     nodeId: saved?.nodeId,
-    bootstrap: opts.bootstrap,
+    bootstrap: opts.bootstrap ?? MAINLINE_BOOTSTRAP,
     concurrency: opts.concurrency ?? 128,
   });
   // Every concurrent findPeers() adds a "peer" listener.
@@ -54,7 +68,7 @@ export async function startNode(opts: NodeOptions): Promise<DHT> {
 
   // Saved nodes have no IDs, so addNode pings each one and keeps those
   // that answer. Passing them as `bootstrap` instead would replace the
-  // library's default routers rather than add to them.
+  // routers rather than add to them.
   for (const node of saved?.nodes ?? []) dht.addNode(node);
 
   await new Promise<void>((resolve, reject) => {
@@ -96,10 +110,22 @@ export async function stopNode(dht: DHT, stateFile: string): Promise<void> {
   await new Promise<void>((resolve) => dht.destroy(resolve));
 }
 
+/**
+ * Save the node ID and known nodes. Current routing-table nodes come
+ * first, topped up with previously saved ones, so a run that failed to
+ * bootstrap doesn't replace a good list with a near-empty one.
+ */
 export async function saveState(dht: DHT, stateFile: string): Promise<void> {
+  const previous = (await loadState(stateFile))?.nodes ?? [];
+  const nodes = new Map<string, PeerAddress>();
+  for (const node of [...dht.toJSON().nodes, ...previous]) {
+    if (nodes.size >= MAX_SAVED_NODES) break;
+    const key = `${node.host}:${node.port}`;
+    if (!nodes.has(key)) nodes.set(key, { host: node.host, port: node.port });
+  }
   const state: SavedState = {
     nodeId: dht.nodeId.toString("hex"),
-    nodes: dht.toJSON().nodes,
+    nodes: [...nodes.values()],
   };
   await mkdir(dirname(stateFile), { recursive: true });
   // Write then rename, so a crash mid-write never leaves a corrupt file.

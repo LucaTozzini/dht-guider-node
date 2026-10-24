@@ -4,9 +4,12 @@
   "description": "Guider nodes: keyword search for the BitTorrent DHT",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx src/index.ts",
+    "dev": "tsx --env-file-if-exists=.env src/index.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "build": "tsc",
+    "start": "tsc && node --env-file-if-exists=.env dist/index.js",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
