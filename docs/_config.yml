@@ -1,0 +1,9 @@
+title: "Guider Nodes: Keyword Search for the BitTorrent DHT"
+description: CSC 466 course project, University of Victoria. Logbook, updates and results.
+theme: jekyll-theme-primer
+# GitHub Pages applies this layout implicitly; set it so local builds match.
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
