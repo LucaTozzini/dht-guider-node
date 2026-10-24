@@ -15,12 +15,12 @@ Project website (logbook, updates, results): https://lucatozzini.github.io/dht-g
 
 ## Milestones
 
-| Dates | Milestone | Status |
-|---|---|---|
-| Oct 10-23, 2026 | Crawler: join the Mainline DHT, harvest info hashes, fetch metadata (BEP 9), start the logbook | In progress |
-| Oct 24 - Nov 6, 2026 | Local index and keyword search, guider discovery, midterm progress demo | Upcoming |
-| Nov 7-20, 2026 | Simulation under churn: catalogue coverage, query latency, one vs. several guiders | Upcoming |
-| Nov 21 - Dec 4, 2026 | Freshness rechecks, cross-checking between guiders, final integration, report and demo | Upcoming |
+| Dates                | Milestone                                                                                      | Status      |
+| -------------------- | ---------------------------------------------------------------------------------------------- | ----------- |
+| Oct 10-23, 2026      | Crawler: join the Mainline DHT, harvest info hashes, fetch metadata (BEP 9), start the logbook | In progress |
+| Oct 24 - Nov 6, 2026 | Local index and keyword search, guider discovery, midterm progress demo                        | Upcoming    |
+| Nov 7-20, 2026       | Simulation under churn: catalogue coverage, query latency, one vs. several guiders             | Upcoming    |
+| Nov 21 - Dec 4, 2026 | Freshness rechecks, cross-checking between guiders, final integration, report and demo         | Upcoming    |
 
 ## Evaluation
 
