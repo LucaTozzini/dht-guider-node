@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import DHT, { type PeerAddress } from "bittorrent-dht";
@@ -13,6 +14,12 @@ export interface NodeOptions {
    * (e.g. a simulation seed).
    */
   bootstrap?: string[] | false;
+  /**
+   * Run a lookup for a random ID this often (ms). Keeps outgoing traffic
+   * flowing so the router's UDP mapping doesn't expire (RFC 4787 allows
+   * as little as 2 minutes). Omit or 0 to disable.
+   */
+  keepAliveMs?: number;
 }
 
 interface SavedState {
@@ -53,7 +60,25 @@ export async function startNode(opts: NodeOptions): Promise<DHT> {
     });
   });
 
+  if (opts.keepAliveMs) startKeepAlive(dht, opts.keepAliveMs);
   return dht;
+}
+
+function startKeepAlive(dht: DHT, intervalMs: number): void {
+  let abortLookup: (() => void) | undefined;
+
+  const timer = setInterval(() => {
+    // Don't stack lookups if the previous one is still running.
+    abortLookup?.();
+    abortLookup = dht.lookup(randomBytes(20));
+  }, intervalMs);
+  timer.unref();
+
+  // Stops on its own when stopNode() destroys the node.
+  dht.once("close", () => {
+    clearInterval(timer);
+    abortLookup?.();
+  });
 }
 
 /** Save the node's ID and routing table, then shut it down. */
