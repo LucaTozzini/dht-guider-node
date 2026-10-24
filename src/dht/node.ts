@@ -20,6 +20,12 @@ export interface NodeOptions {
    * as little as 2 minutes). Omit or 0 to disable.
    */
   keepAliveMs?: number;
+  /**
+   * Max DHT queries in flight, shared by lookups, sampling and keepalive
+   * (default 128). The library's own default of 16 starves concurrent
+   * get_peers lookups: in a live test, 140 of 150 timed out at 16.
+   */
+  concurrency?: number;
 }
 
 interface SavedState {
@@ -37,7 +43,10 @@ export async function startNode(opts: NodeOptions): Promise<DHT> {
   const dht = new DHT({
     nodeId: saved?.nodeId,
     bootstrap: opts.bootstrap,
+    concurrency: opts.concurrency ?? 128,
   });
+  // Every concurrent findPeers() adds a "peer" listener.
+  dht.setMaxListeners(0);
 
   // Must happen in this tick: bootstrapping starts on the next tick, and
   // the socket would otherwise bind to a random port.

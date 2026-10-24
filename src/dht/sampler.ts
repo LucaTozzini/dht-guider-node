@@ -28,6 +28,12 @@ export interface SamplerOptions {
   maxFrontier?: number;
   /** Never revisit a node sooner than this, even if it allows it (default 5 min). */
   minRevisitMs?: number;
+  /**
+   * Checked before every query; return true to hold off, e.g. while the
+   * fetch queue is full, so sampling doesn't take query slots from the
+   * lookups that turn hashes into catalogue entries.
+   */
+  shouldPause?: () => boolean;
 }
 
 export interface SamplerCounts {
@@ -68,6 +74,7 @@ export function startSampler(
     maxInflight = 32,
     maxFrontier = 10_000,
     minRevisitMs = 5 * 60 * 1000,
+    shouldPause,
   }: SamplerOptions = {},
 ): Sampler {
   const rpc = (dht as unknown as { _rpc: KRpc })._rpc;
@@ -136,6 +143,8 @@ export function startSampler(
   };
 
   const tick = () => {
+    if (shouldPause?.()) return;
+    // Counts everyone's queries, so sampling also yields to busy lookups.
     if (rpc.socket.inflight + rpc.pending.length >= maxInflight) return;
     if (frontier.length === 0) seedFromRoutingTable();
     const node = frontier.shift();
